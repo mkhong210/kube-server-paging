@@ -5,26 +5,22 @@
 // 데이터 저장 
 let allData = [];
 
-let currentPage = 1;
+let page = 1;
 
-const perPage = 3;
+const limit = 3;
 let continueToken = null;
 let continueTokens = []; // continueToken 스택 
 
 // 이전 버튼
 function previousPage() {
-	fetchData(true);
-	console.log(continueToken)
+	page--;
+	fetchData('prev');
 }
 
 // 다음 버튼 
 function nextPage() {
-	fetchData(false);
-	if(continueToken == undefined){
-		// console.log(continueToken)
-		// continueToken = null ; 
-		// alert("데이터가 더이상 없습니다.")
-	}
+	page++;
+	fetchData('next');
 }
 
 
@@ -32,42 +28,45 @@ function nextPage() {
 fetchData();
 
 // 데이터 호출 함수
-async function fetchData(direction = true) {
+async function fetchData(direction) {
+	const prevBtn = document.getElementById('prevBtn');
+	const nextBtn = document.getElementById('nextBtn');
 	const apiUrl = 'http://127.0.0.1:5001/k8s/api/v1/pods';
 	const token = 'eyJhbGciOiJSUzI1NiIsImtpZCI6Im9GQVR6alV5QlZHamMtNTZqNkdWM2VVZkJwc2xCYU12VmlqcEJqbnZkOUUifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLWx0NHd2Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI5ZmM1Nzk2NS05YzU1LTQ4YjQtOGZhOC0wZjRiMzU3ZGUwZDciLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZS1zeXN0ZW06YWRtaW4tdXNlciJ9.aJGF-FlP5ZB_4KSVx-pC-UkKsznGqmmm7WtbL4NRFoT5VnTvaz_PT_u7AAG4dAp4EFbejPxpdixK1wVaJs5pAg5RIDHyrcU9AZgfpVIxPpvwiHf8-keociroPJSy4Mue80Z4N5u-wf5PjyzxYwxxy9tzb0lPBysDdAIfh1L-2jBQdatmTczzix4kc_e3oanobXGWPLVAhyI8J7mI7oBg_iEMbwVsMrG2FDuZGmqOg67W-npsi8Br1HIaIQ2uOKtzSGwVdN6q9yksbSLvocQm-J6CxNh9FKq_AtFTSBLW-60CoZSnpKUuKq4Za5tocE4tPjNCPHJesJIb_5_7IVQ5lQ'; // Be very cautious with token security
 
-	let url = `${apiUrl}?limit=${perPage}`;
+	let url = `${apiUrl}?limit=${limit}`;
 
-	console.log(continueToken)
-	// 이전 페이지
-	// if (direction && continueToken) {
-	// 	continueTokens.pop();
-	// 	if (continueTokens.length > 0) {
-	// 		url += `&continue=${continueTokens[continueTokens.length - 1]}`
-	// 	}
-	// 	console.log(direction && continueToken)
-	// } else if (!direction && continueToken) {
-	// 	// 다음 페이지
-	// 	url += `&continue=${continueToken}`;
-	// 	continueTokens.push(continueToken);
-	// }
-	if (direction && continueToken) {
-    if (continueTokens.length > 0) {
-			continueToken = continueTokens[continueTokens.length - 1];
-			continueTokens.pop();
+	// console.log('page:',page,' / continueToken:',continueToken);
+	
+	// check continue token array
+	if (continueToken) {
+		if (direction === 'prev') {
 			if (continueTokens.length > 0) {
-					url += `&continue=${continueToken}`;
+				continueToken = continueTokens[continueTokens.length - 1];
+				continueTokens.pop();
 			}
+		} else if (direction === 'next') {
+			continueTokens.push(continueToken);
 		}
-	} else if (!direction && continueToken) {
-		url += `&continue=${continueToken}`;
-		continueTokens.push(continueToken);
-	} else if (!direction && continueTokens.length > 0) {
-		continueToken = continueTokens[continueTokens.length - 1];
-		url += `&continue=${continueToken}`;
+	}
+	
+	/**
+	 * continue 값을 넣어야 할 때
+	 * 1. 다음페이지로 이동 (continueToken 이 undefined 가 아닐 때)
+	 * 2. 이전페이지로 이동 (1page 이동 제외)
+	 * continue token 값을 어디껄 가져와야 하는가
+	 * - 다음 페이지 이동 시에는 continueToken 값 바로 활용
+	 * - 이전 페이지 이동 시에는 배열 내에 [page - 2] 번째 token 활용
+	 */
+	// check prev/next button
+	if (direction === 'prev') {
+		if (page > 1) url += `&continue=${continueTokens[page - 2]}`;
+	} else if (direction === 'next') {
+		if (continueToken) url += `&continue=${continueToken}`;
 	}
 
-	console.log(continueTokens)
+	// console.log('continueTokens:',continueTokens)
+	// console.log('direction:',direction,' / url:',url)
 
 	try {
 		const response = await fetch(url, {
@@ -88,11 +87,26 @@ async function fetchData(direction = true) {
 
 		allData = data.items;
 		continueToken = data.metadata.continue;
-		console.log('allData:',allData, data.metadata.continue)
+		// console.log('allData:',allData, data.metadata.continue)
+		
+		if (page === 1) {
+			prevBtn.disabled = true;
+			prevBtn.classList.add('cursor-not-allowed');
+		} else {
+			prevBtn.disabled = false;
+			prevBtn.classList.remove('cursor-not-allowed');
+		}
+		if (continueToken === undefined) {
+			nextBtn.disabled = true;
+			nextBtn.classList.add('cursor-not-allowed');
+		} else {
+			nextBtn.disabled = false;
+			nextBtn.classList.remove('cursor-not-allowed');
+		}
 
 		displayData(allData)
 
-		console.log(url)
+		// console.log(url)
 	
 	} catch (error) {
 		console.error('Fetch error:', error);
